@@ -91,7 +91,7 @@ if __name__ == '__main__':
     for epoch in range(1,tc.MAX_EPOCH+1):
         
         # Initialize iterator and shuffle data
-#        train_data = batch_train.shuffle(tc.NUMBER_TRAINING_ELEMENTS)
+        #        train_data = batch_train.shuffle(tc.NUMBER_TRAINING_ELEMENTS)
         sess.run(iterator.make_initializer(batch_train))
         train_step = input_count = hit_count_train = total_loss_train = 0
         while True:
