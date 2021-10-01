@@ -6,6 +6,8 @@ import data_ops as dto
 import tensorflow as tf
 import initialization as init
 
+# tf.compat.v1.disable_eager_execution()
+
 tc = init.init_params()
     
 if tc.TRAINING_DATA_TYPE == 'mnist' or tc.TESTING_DATA_TYPE == 'mnist':
@@ -46,7 +48,7 @@ gts_tensor = gts #tf.convert_to_tensor(gts,dtype=tf.float32)
 def _preprocess(img, label):
     
     img_r = tf.reshape(img, [tc.DATA_ROW, tc.DATA_COL, 1])
-    img_r = tf.image.resize_images(img_r, [tc.OBJECT_ROW, tc.OBJECT_COL],align_corners=True)
+    img_r = tf.compat.v1.image.resize(img_r, [tc.OBJECT_ROW, tc.OBJECT_COL],align_corners=True)
     img_r = tf.reshape(img_r, [tc.OBJECT_ROW, tc.OBJECT_COL])
     img_r = tf.divide(img_r,global_norm)
     

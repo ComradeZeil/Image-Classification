@@ -12,14 +12,14 @@ import math
 def tf_fft_shift_2d(self):
 
     B, M, N = self.shape
-    if np.mod(M.value, 2) == 0:
-        M_half = M.value / 2.0
+    if np.mod(M, 2) == 0:
+        M_half = M / 2.0
     else:
-        M_half = np.floor(M.value / 2.0) + 1.0
-    if np.mod(N.value, 2) == 0:
-        N_half = N.value / 2.0
+        M_half = np.floor(M / 2.0) + 1.0
+    if np.mod(N, 2) == 0:
+        N_half = N / 2.0
     else:
-        N_half = np.floor(N.value / 2.0) + 1.0
+        N_half = np.floor(N / 2.0) + 1.0
 
     img_1 = tf.slice(self, np.int32([0, 0, 0]), np.int32([B, M_half, N_half]))
     img_2 = tf.slice(self, np.int32([0, 0, N_half]), np.int32([B, M_half, N - N_half]))
@@ -31,14 +31,14 @@ def tf_fft_shift_2d(self):
 def tf_ifft_shift_2d(self):
     
     B, M, N = self.shape
-    if np.mod(M.value, 2) == 0:
-        M_half = M.value / 2.0
+    if np.mod(M, 2) == 0:
+        M_half = M / 2.0
     else:
-        M_half = np.floor(M.value / 2.0)
-    if np.mod(N.value, 2) == 0:
-        N_half = N.value / 2.0
+        M_half = np.floor(M / 2.0)
+    if np.mod(N, 2) == 0:
+        N_half = N / 2.0
     else:
-        N_half = np.floor(N.value / 2.0)
+        N_half = np.floor(N / 2.0)
 
     img_1 = tf.slice(self, np.int32([0, 0, 0]), np.int32([B, M_half, N_half]))
     img_2 = tf.slice(self, np.int32([0, 0, N_half]), np.int32([B, M_half, N - N_half]))
@@ -57,34 +57,34 @@ def tf_udft2(self):
     
     M,N = self.shape[1],self.shape[2]
     # self = tf.convert_to_tensor(self, dtype=tf.complex64)
-    out = tf.fft2d(self)/math.sqrt(M.value*N.value)
+    out = tf.signal.fft2d(self)/math.sqrt(M*N)
     return out
 
 def tf_uidft2(self):
     
     M,N = self.shape[1],self.shape[2]
     # self = tf.convert_to_tensor(self, dtype=tf.complex64)
-    out = tf.ifft2d(self)*math.sqrt(M.value*N.value)
+    out = tf.signal.ifft2d(self)*math.sqrt(M*N)
     return out
 
 def tf_sdft2(self):
     
     B,M,N = self.shape #M, N = self.get_shape().as_list()
-    x = tf.constant(np.arange(M.value),shape=[M.value,1],dtype=tf.float32)
-    y = tf.constant(np.arange(N.value),shape=[1,N.value],dtype=tf.float32)
-    xphase = tf.matmul(np.pi*(M.value-1)/M.value*x,tf.ones((1,N.value),dtype=tf.float32))
-    yphase = tf.matmul(tf.ones((M.value,1),dtype=tf.float32),np.pi*(N.value-1)/N.value*y)
+    x = tf.constant(np.arange(M),shape=[M,1],dtype=tf.float32)
+    y = tf.constant(np.arange(N),shape=[1,N],dtype=tf.float32)
+    xphase = tf.matmul(np.pi*(M-1)/M*x,tf.ones((1,N),dtype=tf.float32))
+    yphase = tf.matmul(tf.ones((M,1),dtype=tf.float32),np.pi*(N-1)/N*y)
     xyphase = xphase+yphase
-#    x = np.arange(M.value)
-#    y = np.arange(N.value)
-#    xyphase = np.outer(np.pi*(M.value-1)/M.value*x,np.ones(N.value))+np.outer(np.ones(M.value),np.pi*(N.value-1)/N.value*y)
+#    x = np.arange(M)
+#    y = np.arange(N)
+#    xyphase = np.outer(np.pi*(M-1)/M*x,np.ones(N))+np.outer(np.ones(M),np.pi*(N-1)/N*y)
     exy = tf.complex(tf.cos(xyphase),tf.sin(xyphase))
     exy = tf.cast(exy,dtype=tf.complex64)
 #    exy = tf.tile([exy],[B.value,1,1])
-#    exy = np.outer(np.exp(1j*np.pi*(M.value-1)/M.value*x),(np.exp(1j*np.pi*(N.value-1)/N.value*y)))
-#    phaseterm = np.exp(-1j*math.pi*((M.value-1)**2)/2/M.value)*np.exp(-1j*math.pi*((N.value-1)**2)/2/N.value)*exy
-    phaseterm = tf.complex(tf.cos(-math.pi*((M.value-1)**2)/2/M.value-math.pi*((N.value-1)**2)/2/N.value),\
-                           tf.sin(-math.pi*((M.value-1)**2)/2/M.value-math.pi*((N.value-1)**2)/2/N.value))
+#    exy = np.outer(np.exp(1j*np.pi*(M-1)/M*x),(np.exp(1j*np.pi*(N-1)/N*y)))
+#    phaseterm = np.exp(-1j*math.pi*((M-1)**2)/2/M)*np.exp(-1j*math.pi*((N-1)**2)/2/N)*exy
+    phaseterm = tf.complex(tf.cos(-math.pi*((M-1)**2)/2/M-math.pi*((N-1)**2)/2/N),\
+                           tf.sin(-math.pi*((M-1)**2)/2/M-math.pi*((N-1)**2)/2/N))
     phaseterm = tf.cast(phaseterm,dtype=tf.complex64)
 #    phaseterm = tf.tile([phaseterm],[B.value,1,1])
     phaseterm = tf.multiply(phaseterm,exy)
@@ -94,18 +94,18 @@ def tf_sdft2(self):
 def tf_sidft2(self):
     
     B,M,N = self.shape
-    x = tf.constant(np.arange(M.value),shape=[M.value,1],dtype=tf.float32)
-    y = tf.constant(np.arange(N.value),shape=[1,N.value],dtype=tf.float32)
-    xphase = tf.matmul(-np.pi*(M.value-1)/M.value*x,tf.ones((1,N.value),dtype=tf.float32))
-    yphase = tf.matmul(tf.ones((M.value,1),dtype=tf.float32),-np.pi*(N.value-1)/N.value*y)
+    x = tf.constant(np.arange(M),shape=[M,1],dtype=tf.float32)
+    y = tf.constant(np.arange(N),shape=[1,N],dtype=tf.float32)
+    xphase = tf.matmul(-np.pi*(M-1)/M*x,tf.ones((1,N),dtype=tf.float32))
+    yphase = tf.matmul(tf.ones((M,1),dtype=tf.float32),-np.pi*(N-1)/N*y)
     xyphase = xphase+yphase
     exy = tf.complex(tf.cos(xyphase),tf.sin(xyphase))
     exy = tf.cast(exy,dtype=tf.complex64)
 #    exy = tf.tile([exy],[B.value,1,1])
-#    exy = np.outer(np.exp(-1j*np.pi*(M.value-1)/M.value*x),np.exp(-1j*np.pi*(N.value-1)/N.value*y))
-#    phaseterm = np.exp(1j*np.pi*((M.value-1)**2)/2/M.value)*np.exp(1j*np.pi*((N.value-1)**2)/2/N.value)*exy
-    phaseterm = tf.complex(tf.cos(np.pi*((M.value-1)**2)/2/M.value+np.pi*((N.value-1)**2)/2/N.value),\
-                           tf.sin(np.pi*((M.value-1)**2)/2/M.value+np.pi*((N.value-1)**2)/2/N.value))
+#    exy = np.outer(np.exp(-1j*np.pi*(M-1)/M*x),np.exp(-1j*np.pi*(N-1)/N*y))
+#    phaseterm = np.exp(1j*np.pi*((M-1)**2)/2/M)*np.exp(1j*np.pi*((N-1)**2)/2/N)*exy
+    phaseterm = tf.complex(tf.cos(np.pi*((M-1)**2)/2/M+np.pi*((N-1)**2)/2/N),\
+                           tf.sin(np.pi*((M-1)**2)/2/M+np.pi*((N-1)**2)/2/N))
     phaseterm = tf.cast(phaseterm,dtype=tf.complex64)
 #    phaseterm = tf.tile([phaseterm],[B.value,1,1])
     phaseterm = tf.multiply(phaseterm,exy)
@@ -134,31 +134,31 @@ def tf_FSPAS(self,wlength,z,dx,dy,ridx,*theta0):
     
     wlengtheff = wlength/ridx
     B,M,N = self.shape
-    dfx = 1/dx/M.value
-    dfy = 1/dy/N.value
-    fx = tf.constant((np.arange(M.value)-(M.value-1)/2)*dfx,shape=[M.value,1],dtype=tf.float32)
-    fy = tf.constant((np.arange(N.value)-(N.value-1)/2)*dfy,shape=[1,N.value],dtype=tf.float32)
-    fx2 = tf.matmul(fx**2,tf.ones((1,N.value),dtype=tf.float32))
-    fy2 = tf.matmul(tf.ones((M.value,1),dtype=tf.float32),fy**2)
-#    fx = (np.arange(M.value)-(M.value-1)/2)*dfx
-#    fy = (np.arange(N.value)-(N.value-1)/2)*dfy
-#    fx2 = np.outer((fx)**2,np.ones(N.value))
-#    fy2 = np.outer(np.ones(M.value),(fy)**2)
+    dfx = 1/dx/M
+    dfy = 1/dy/N
+    fx = tf.constant((np.arange(M)-(M-1)/2)*dfx,shape=[M,1],dtype=tf.float32)
+    fy = tf.constant((np.arange(N)-(N-1)/2)*dfy,shape=[1,N],dtype=tf.float32)
+    fx2 = tf.matmul(fx**2,tf.ones((1,N),dtype=tf.float32))
+    fy2 = tf.matmul(tf.ones((M,1),dtype=tf.float32),fy**2)
+#    fx = (np.arange(M)-(M-1)/2)*dfx
+#    fy = (np.arange(N)-(N-1)/2)*dfy
+#    fx2 = np.outer((fx)**2,np.ones(N))
+#    fy2 = np.outer(np.ones(M),(fy)**2)
     if theta0:#BANDLIMIT OF THE FREE-SPACE PROPAGATION
         f0 = np.sin(np.deg2rad(theta0))/wlengtheff
-        Q = tf.to_float(((fx2+fy2)<=(f0**2)))
+        Q = tf.cast(((fx2+fy2)<=(f0**2)), tf.float32)
     else:
-        Q = tf.to_float(((fx2+fy2)<=(1/wlengtheff**2)))
+        Q = tf.cast(((fx2+fy2)<=(1/wlengtheff**2)), tf.float32)
     
 #    Q = Q.astype(int)
     W = Q*(fx2+fy2)*(wlengtheff**2)
-    Hphase = 2*np.pi/wlengtheff*z*(tf.ones((M.value,N.value))-W)**(0.5)
+    Hphase = 2*np.pi/wlengtheff*z*(tf.ones((M,N))-W)**(0.5)
     HFSP = tf.complex(Q*tf.cos(Hphase),Q*tf.sin(Hphase))     
-#    HFSP = np.exp(1j*2*np.pi/wlengtheff*z*(np.ones((M.value,N.value))-W)**(0.5))*Q
+#    HFSP = np.exp(1j*2*np.pi/wlengtheff*z*(np.ones((M,N))-W)**(0.5))*Q
 #    HFSP = tf.convert_to_tensor(HFSP, dtype=tf.complex64)
 #    HFSP = tf.tile([HFSP],[B.value,1,1])        
     output = tf_sidft2(tf.multiply(HFSP,tf_sdft2(self)))
-    output = tf.slice(output, np.int32([0, 0, 0]), np.int32([B, M.value, N.value]))
+    output = tf.slice(output, np.int32([0, 0, 0]), np.int32([B, M, N]))
     return output
 
 def tf_FSPAS_FFT(self,wlength,z,dx,dy,ridx,*theta0):
@@ -183,26 +183,26 @@ def tf_FSPAS_FFT(self,wlength,z,dx,dy,ridx,*theta0):
     
     wlengtheff = wlength/ridx
     B,M,N = self.shape
-    dfx = 1/dx/M.value
-    dfy = 1/dy/N.value
-    fx = tf.constant((np.arange(M.value)-(M.value)/2)*dfx,shape=[M.value,1],dtype=tf.float32)
-    fy = tf.constant((np.arange(N.value)-(N.value)/2)*dfy,shape=[1,N.value],dtype=tf.float32)
-    fx2 = tf.matmul(fx**2,tf.ones((1,N.value),dtype=tf.float32))
-    fy2 = tf.matmul(tf.ones((M.value,1),dtype=tf.float32),fy**2)
+    dfx = 1/dx/M
+    dfy = 1/dy/N
+    fx = tf.constant((np.arange(M)-(M)/2)*dfx,shape=[M,1],dtype=tf.float32)
+    fy = tf.constant((np.arange(N)-(N)/2)*dfy,shape=[1,N],dtype=tf.float32)
+    fx2 = tf.matmul(fx**2,tf.ones((1,N),dtype=tf.float32))
+    fy2 = tf.matmul(tf.ones((M,1),dtype=tf.float32),fy**2)
     if theta0:#BANDLIMIT OF THE FREE-SPACE PROPAGATION
         f0 = np.sin(np.deg2rad(theta0))/wlengtheff
-        Q = tf.to_float(((fx2+fy2)<=(f0**2)))
+        Q = tf.cast(((fx2+fy2)<=(f0**2)), tf.float32)
     else:
-        Q = tf.to_float(((fx2+fy2)<=(1/wlengtheff**2)))
+        Q = tf.cast(((fx2+fy2)<=(1/wlengtheff**2)), tf.float32)
     
     W = Q*(fx2+fy2)*(wlengtheff**2)
-    Hphase = 2*np.pi/wlengtheff*z*(tf.ones((M.value,N.value))-W)**(0.5)
+    Hphase = 2*np.pi/wlengtheff*z*(tf.ones((M,N))-W)**(0.5)
     HFSP = tf.complex(Q*tf.cos(Hphase),Q*tf.sin(Hphase))
-    ASpectrum = tf.fft2d(self)
+    ASpectrum = tf.signal.fft2d(self)
     ASpectrum = tf_fft_shift_2d(ASpectrum)    
     ASpectrum_z = tf_ifft_shift_2d(tf.multiply(HFSP,ASpectrum))
-    output = tf.ifft2d(ASpectrum_z)
-    output = tf.slice(output, np.int32([0, 0, 0]), np.int32([B, M.value, N.value]))
+    output = tf.signal.ifft2d(ASpectrum_z)
+    output = tf.slice(output, np.int32([0, 0, 0]), np.int32([B, M, N]))
     return output
 
 def paraxlens(wlength,focal_length,center,fshift,diameter,dx,dy,M,N):

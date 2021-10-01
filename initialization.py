@@ -30,9 +30,10 @@ def init_params():
     tc.BATCH_SIZE, tc.TEST_BATCH_SIZE = 64, 20
     tc.LEARNING_RATE, tc.OPTIMIZER, tc.TV_LOSS_PARAM = 1e-3, 'adam', 0.0
     tc.MAX_EPOCH = 50
+
     tc.TFBOARD_PATH, tc.MASK_SAVING_PATH, tc.MASK_TESTING_PATH, tc.OUTPUT_PATH = '.\TFBOARD', \
     '.\MODEL\MASKS', '.\BEST_MODEL', '.\OUTPUT'
-    tc.DATA_PATH = 'D:\Deniz\Python\Datasets'
+    # tc.DATA_PATH = 'D:\Deniz\Python\Datasets'
     tc.validation_ratio = 0.5 # Ratio of number of elements in validation set to test set
     
     # COMPUTED GLOBAL PARAMETERS
@@ -48,3 +49,4 @@ def init_params():
     tc.BEAM_COL = int(np.round(tc.BEAM_WY/tc.DY))
     
     return tc
+

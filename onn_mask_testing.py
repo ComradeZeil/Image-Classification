@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
 #    tf.gfile.MakeDirs(SENSOR_SAVING_PATH)
 
-    sess = tf.InteractiveSession()
+    sess = tf.compat.v1.InteractiveSession()
 
     count = 0
     
