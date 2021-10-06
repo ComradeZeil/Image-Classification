@@ -14,22 +14,21 @@ import scipy.io as sio
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-# tf.compat.v1.disable_eager_execution()
+tf.compat.v1.disable_eager_execution()
 
 # IMPORT and GLOBALIZE PARAMETERS
 tc = init.init_params()
 
 #GPU-COMPUTING CONFIGURATION
-# def get_default_config(fraction=0.9):
+def get_default_config(fraction=0.9):
 
-#     conf = tf.compat.v1.ConfigProto()
-#     conf.gpu_options.per_process_gpu_memory_fraction = fraction
-#     conf.gpu_options.allocator_type = 'BFC'
-#     conf.gpu_options.allow_growth = True
-#     conf.allow_soft_placement = True
+    conf = tf.compat.v1.ConfigProto()
+    conf.gpu_options.per_process_gpu_memory_fraction = fraction
+    conf.gpu_options.allocator_type = 'BFC'
+    conf.gpu_options.allow_growth = True
+    conf.allow_soft_placement = True
 
-    # return conf
-
+    return conf
 tf.io.gfile.makedirs(tc.OUTPUT_PATH)
 tf.io.gfile.makedirs(tc.MASK_SAVING_PATH)
 tf.io.gfile.makedirs(tc.MASK_TESTING_PATH)
@@ -55,9 +54,10 @@ text_file.write(msg + '\n')
 
 if __name__ == '__main__':
     
-    # conf = get_default_config()
-    # sess = tf.compat.v1.InteractiveSession(config=conf)
+    conf = get_default_config()
+    sess = tf.compat.v1.InteractiveSession(config=conf)
     
+    # with tf.device('/gpu:0'):
     with tf.name_scope("datasets"):
         # DEFINE DATA PIPELINE, INITIALIZE ITERATOR
         batch_train = dtg.get_data_batch('training')
@@ -86,10 +86,10 @@ if __name__ == '__main__':
 #    accuracy, accuracy_op = tf.metrics.accuracy(tf.argmax(data_label, axis=1), tf.argmax(onn_predictions, axis=1))
 #    mean_loss, mean_loss_op = tf.metrics.mean(onn_loss)
         
-    # init_all = tf.group(tf.compat.v1.global_variables_initializer(),
-    #                    tf.compat.v1.local_variables_initializer())
-    checkpoint = tf.train.Checkpoint()
-    # sess.run(init_all)
+    init_all = tf.group(tf.compat.v1.global_variables_initializer(),
+                    tf.compat.v1.local_variables_initializer())
+    saver = tf.compat.v1.train.Saver()
+    sess.run(init_all)
 #    sess.graph.finalize()    
     print("Entering training loop")
     
@@ -97,13 +97,17 @@ if __name__ == '__main__':
         
         # Initialize iterator and shuffle data
         #        train_data = batch_train.shuffle(tc.NUMBER_TRAINING_ELEMENTS)
-        iterator.make_initializer(batch_train)
+        sess.run(iterator.make_initializer(batch_train))
         train_step = input_count = hit_count_train = total_loss_train = 0
         while True:
         # while train_step <= 10:
             try:
                 # run train iteration        
-                _,  onn_loss_value, onn_mask_phase_value, onn_mask_amp_value, onn_predictions_value, hit_count, input_field = onn_train, onn_combine_loss, onn_mask_phase, onn_mask_amp, onn_predictions, onn_hit, onn_field
+                _,  onn_loss_value, onn_mask_phase_value, onn_mask_amp_value, onn_predictions_value, hit_count, input_field = sess.run([onn_train, 
+                                                                                                                        onn_combine_loss, 
+                                                                                                                        onn_mask_phase, onn_mask_amp, 
+                                                                                                                        onn_predictions, onn_hit, 
+                                                                                                                        onn_field])
                 # print(input_field.shape)
                 # exit()
 
@@ -112,13 +116,12 @@ if __name__ == '__main__':
                 input_count += tc.BATCH_SIZE
                 hit_count_train += hit_count
                 total_loss_train += onn_loss_value
-                # if(train_step==1):
-                #     first_input = input_field[0,:,:]
-                #     first_input_phase = np.angle(first_input.numpy())
-                #     first_input_amp = np.abs(first_input.numpy())
-                #     # convert phase and amplitude to an array to be saved
-                #     plt.imsave("./first_input_amp" + ".png", first_imput_amp, cmap='gray')
-                #     plt.imsave("./first_input_phase" + ".png", first_input_phase, cmap='gray')
+                if(train_step==1):
+                    first_input = input_field[0,:,:]
+                    first_input_phase = np.angle(first_input)
+                    first_input_amp = np.abs(first_input)
+                    plt.imsave("./first_input_amp" + ".png", first_input_amp, cmap='gray')
+                    plt.imsave("./first_input_phase" + ".png", first_input_phase, cmap='gray')
                     
             except (tf.errors.OutOfRangeError, StopIteration):
                 break
@@ -126,13 +129,13 @@ if __name__ == '__main__':
         accuracy_train = hit_count_train/input_count*100
         mean_loss_train = total_loss_train/train_step
         # initialize iterator for validation dataset. No need to shuffle    
-        iterator.make_initializer(batch_test)
+        sess.run(iterator.make_initializer(batch_test))
         test_step = test_count = hit_count_test = total_loss_test = 0
         while True:
         # while test_step <= 10:
             try:
                 # run test iteration        
-                onn_loss_value_test, onn_measurement_value_test, test_field, hit_count = onn_combine_loss, onn_measurement, onn_field, onn_hit                       
+                onn_loss_value_test, onn_measurement_value_test, test_field, hit_count = sess.run([onn_combine_loss, onn_measurement, onn_field, onn_hit])                            
                 
                 test_step += 1
                 test_count += tc.BATCH_SIZE
@@ -161,7 +164,7 @@ if __name__ == '__main__':
             save_model = bool(mean_loss_test<best_loss)
             
         if save_model is True:
-            save_path = checkpoint.save("./MODEL/model{}".format(epoch))
+            save_path = saver.save(sess, "./MODEL/model{}".format(epoch))
             print("Model saved in path: %s" % save_path)
             best_loss = mean_loss_test 
             best_accuracy = accuracy_test
@@ -172,12 +175,12 @@ if __name__ == '__main__':
                 np.savetxt(tc.MASK_SAVING_PATH + "/mask_amp_" + str(epoch) + "_" + str(i) + ".txt", onn_mask_phase_value[i,:,:])
 
         if epoch % 15 == 0 :
-            reset_op
+            sess.run(reset_op)
 
     print("Training Finished! Generating Confusion Matrix Data.")
 
-    checkpoint.restore("./MODEL/model{}".format(save_epoch))
-    iterator.make_initializer(batch_final)
+    saver.restore(sess,"./MODEL/model{}".format(save_epoch))
+    sess.run(iterator.make_initializer(batch_final))
     test_step = test_count = hit_count_test = total_loss_test = 0
     prediction = np.zeros((1,10))
     label = 0
@@ -185,7 +188,7 @@ if __name__ == '__main__':
     # while test_step <= 10:
         try:
             # run train iteration        
-            onn_loss_value_test, onn_measurement_value_test, test_field, hit_count = tf.function([onn_combine_loss, onn_measurement, onn_field, onn_hit])                            
+            onn_loss_value_test, onn_measurement_value_test, test_field, hit_count = sess.run([onn_combine_loss, onn_measurement, onn_field, onn_hit])                            
                 
             test_step += 1
             test_count += tc.BATCH_SIZE
